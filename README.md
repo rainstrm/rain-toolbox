@@ -36,8 +36,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 
 ### 更新 short_cuts
 
-先配置 `github-rain` SSH 主机别名。脚本默认使用当前用户的 `~/.ssh/id_rsa`，会在
-当前用户的 `~/.ssh/config` 写入 `github-rain -> github.com` 配置；不会复制私钥。
+配置 `github-rain` SSH 主机别名
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)"
