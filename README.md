@@ -36,11 +36,23 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 
 ### 更新 short_cuts
 
-先在本机运行 `bash setup_github_ssh.sh` 配置 `github-rain` SSH 别名，再在希望存放
-`short_cuts` 的目录运行：
+先配置 `github-rain` SSH 主机别名。脚本默认使用当前用户的 `~/.ssh/id_rsa`，会在
+当前用户的 `~/.ssh/config` 写入 `github-rain -> github.com` 配置；不会复制私钥。
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)"
+```
+
+再切换到希望存放 `short_cuts` 的目录运行更新：
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
+```
+
+也可以一次完成配置和更新：
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)" && bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
 ```
 
 ## 服务器一键使用
@@ -60,10 +72,19 @@ curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/.vimrc -
 
 ## 本机 GitHub SSH 配置
 
-仓库克隆到本机后运行：
+仓库克隆到本机后，或直接从 GitHub 运行：
 
 ```bash
 bash setup_github_ssh.sh
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)"
+```
+
+配置完成后可验证 SSH 身份：
+
+```bash
 ssh -T git@github-rain
 ```
 
