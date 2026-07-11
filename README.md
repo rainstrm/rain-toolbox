@@ -11,7 +11,7 @@
 | `.vimrc` | 无插件的轻量 Vim 配置 |
 | `setup_zsh_tools_debian.sh` | 在 Debian/Ubuntu 安装 zsh、Oh My Zsh、Starship、常用插件与终端工具 |
 | `setup_github_ssh.sh` | 用现有私钥配置独立的 `github-rain` SSH 主机别名 |
-| `install_rain_strom_github_key.sh` | 把 `rain-strom` 在 GitHub 公开的公钥加入服务器 `authorized_keys` |
+| `install_rain_strom_github_key.sh` | 选择并安装 `rain-strom` 在 GitHub 公开的一个或多个 SSH 公钥 |
 | `update_short_cuts.sh` | 更新 `rain-strom/short_cuts`，并保留旧目录备份 |
 
 ## 本机首次配置
@@ -113,8 +113,16 @@ curl -fsSL https://raw.githubusercontent.com/rain-strom/rain-toolbox/main/.vimrc
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rain-strom/rain-toolbox/main/install_rain_strom_github_key.sh)"
 ```
 
-脚本只下载 `https://github.com/rain-strom.keys` 中的公开密钥，并去重写入
-`~/.ssh/authorized_keys`。这和上传私钥完全不同：服务器只需要公钥。
+脚本只下载 `https://github.com/rain-strom.keys` 中的公开密钥，并显示每把密钥的
+编号、类型、SHA256 指纹和备注。存在多把公钥时，可以输入 `1`、`1 2` 或 `1,2`
+选择要安装的密钥；直接回车或输入 `all` 会安装全部。已经存在于
+`~/.ssh/authorized_keys` 的密钥不会重复添加。这和上传私钥完全不同：服务器只需要公钥。
+
+在自动化或无交互环境中，可以使用 `KEY_SELECTION`；未指定时仍默认安装全部：
+
+```bash
+KEY_SELECTION="1,2" bash install_rain_strom_github_key.sh
+```
 
 ## 更新 short_cuts
 
