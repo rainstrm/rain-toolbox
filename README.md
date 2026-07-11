@@ -2,7 +2,7 @@
 
 `rain-strom` 的个人终端配置与维护脚本仓库。项目参考了
 [`rmbbiji/rmbbiji-toolbox`](https://github.com/rmbbiji/rmbbiji-toolbox) 的用途，
-但账号、SSH 配置和脚本都已独立整理，不包含任何私钥。
+但账号、SSH 配置和脚本都已独立整理
 
 ## 内容
 
