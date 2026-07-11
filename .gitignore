@@ -1,0 +1,16 @@
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.tmp
+*.bak
+*.bak.*
+
+# Never commit local credentials.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_rsa.pub
