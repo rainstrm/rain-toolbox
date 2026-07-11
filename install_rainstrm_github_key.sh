@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install rain-strom's public GitHub keys for SSH login to the current server.
+# Interactively install rainstrm's public GitHub keys for SSH login.
 # Run this script as the user who should receive access.
 
-GITHUB_USER="${GITHUB_USER:-rain-strom}"
+GITHUB_USER="${GITHUB_USER:-rainstrm}"
 KEYS_URL="https://github.com/${GITHUB_USER}.keys"
 SSH_DIR="${HOME}/.ssh"
 AUTHORIZED_KEYS="${SSH_DIR}/authorized_keys"
+
+if [[ ! -t 0 ]]; then
+  echo "An interactive terminal is required; no key was installed." >&2
+  echo "Run this script directly and select the key(s) at the prompt." >&2
+  exit 1
+fi
 
 fetch_keys() {
   if command -v curl >/dev/null 2>&1; then
@@ -53,12 +59,12 @@ for index in "${!available_keys[@]}"; do
 done
 
 declare -a selected_keys=()
-selection="${KEY_SELECTION:-}"
-
-if (( ${#available_keys[@]} > 1 )) && [[ -z "${selection}" && -t 0 ]]; then
-  printf 'Select key number(s), separated by spaces or commas [all]: '
-  read -r selection || selection=""
-fi
+selection=""
+printf 'Select key number(s), separated by spaces or commas [all]: '
+read -r selection || {
+  echo "Unable to read a selection; no key was installed." >&2
+  exit 1
+}
 
 case "${selection}" in
   ""|a|A|all|ALL|All)

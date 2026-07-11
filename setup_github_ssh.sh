@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configure an isolated GitHub host alias for the rain-strom account.
+# Configure an isolated GitHub host alias for the rainstrm account.
 # The private key is referenced in place and is never copied.
 
 SSH_DIR="${HOME}/.ssh"
@@ -48,4 +48,4 @@ trap - EXIT
 
 echo "Configured GitHub SSH alias: ${HOST_ALIAS}"
 echo "Test it with: ssh -T git@${HOST_ALIAS}"
-echo "Clone with: git clone git@${HOST_ALIAS}:rain-strom/REPOSITORY.git"
+echo "Clone with: git clone git@${HOST_ALIAS}:rainstrm/REPOSITORY.git"

@@ -4,7 +4,7 @@ set -euo pipefail
 # Replace a local short_cuts checkout with a freshly cloned copy.
 # Override defaults with SHORT_CUTS_REPO and SHORT_CUTS_DIR.
 
-REPO_URL="${SHORT_CUTS_REPO:-git@github-rain:rain-strom/short_cuts.git}"
+REPO_URL="${SHORT_CUTS_REPO:-git@github-rain:rainstrm/short_cuts.git}"
 TARGET_DIR="${SHORT_CUTS_DIR:-${PWD}/short_cuts}"
 PARENT_DIR="$(dirname "${TARGET_DIR}")"
 TARGET_NAME="$(basename "${TARGET_DIR}")"

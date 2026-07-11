@@ -1,6 +1,6 @@
 # rain-toolbox
 
-`rain-strom` 的个人终端配置与维护脚本仓库。项目参考了
+`rainstrm` 的个人终端配置与维护脚本仓库。项目参考了
 [`rmbbiji/rmbbiji-toolbox`](https://github.com/rmbbiji/rmbbiji-toolbox) 的用途，
 但账号、SSH 配置和脚本都已独立整理
 
@@ -11,8 +11,8 @@
 | `.vimrc` | 无插件的轻量 Vim 配置 |
 | `setup_zsh_tools_debian.sh` | 在 Debian/Ubuntu 安装 zsh、Oh My Zsh、Starship、常用插件与终端工具 |
 | `setup_github_ssh.sh` | 用现有私钥配置独立的 `github-rain` SSH 主机别名 |
-| `install_rain_strom_github_key.sh` | 选择并安装 `rain-strom` 在 GitHub 公开的一个或多个 SSH 公钥 |
-| `update_short_cuts.sh` | 更新 `rain-strom/short_cuts`，并保留旧目录备份 |
+| `install_rainstrm_github_key.sh` | 交互选择并安装 `rainstrm` 在 GitHub 公开的一个或多个 SSH 公钥 |
+| `update_short_cuts.sh` | 更新 `rainstrm/short_cuts`，并保留旧目录备份 |
 
 ## 本机首次配置
 
@@ -38,7 +38,7 @@ ssh -T git@github-rain
 成功时 GitHub 会显示：
 
 ```text
-Hi rain-strom! You've successfully authenticated, but GitHub does not provide shell access.
+Hi rainstrm! You've successfully authenticated, but GitHub does not provide shell access.
 ```
 
 如果私钥不在默认位置：
@@ -52,7 +52,7 @@ GITHUB_SSH_KEY=/path/to/private_key bash setup_github_ssh.sh
 将邮箱替换成你的 GitHub 邮箱，或 GitHub 提供的 `noreply` 邮箱：
 
 ```bash
-git config --global user.name "rain-strom"
+git config --global user.name "rainstrm"
 git config --global user.email "你的 GitHub 邮箱"
 ```
 
@@ -61,7 +61,7 @@ git config --global user.email "你的 GitHub 邮箱"
 ### 4. 克隆与推送
 
 ```bash
-git clone git@github-rain:rain-strom/rain-toolbox.git
+git clone git@github-rain:rainstrm/rain-toolbox.git
 cd rain-toolbox
 git add .
 git commit -m "Initial toolbox setup"
@@ -83,8 +83,8 @@ git push
 脚本适用于 Debian/Ubuntu，会修改 `~/.zshrc` 和 `~/.config/starship.toml`，
 并在修改前创建带时间戳的备份。
 
-下面的 GitHub 直链命令仅适用于**公开仓库**。如果仓库保持私有，请先通过 SSH
-克隆仓库，再从本地运行脚本；未认证的 `raw.githubusercontent.com` 无法读取私有仓库。
+仓库已公开，因此可以通过 `raw.githubusercontent.com` 直接获取配置文件和脚本。
+直接执行远程脚本前，仍建议先打开对应链接检查内容。
 
 从已克隆仓库运行：
 
@@ -93,16 +93,16 @@ bash setup_zsh_tools_debian.sh
 exec zsh -l
 ```
 
-从 GitHub 直接运行前，建议先打开链接检查脚本内容：
+从 GitHub 直接运行：
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/rain-strom/rain-toolbox/main/setup_zsh_tools_debian.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_zsh_tools_debian.sh)"
 ```
 
 安装 Vim 配置：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rain-strom/rain-toolbox/main/.vimrc -o ~/.vimrc
+curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/.vimrc -o ~/.vimrc
 ```
 
 ## 给服务器添加登录公钥
@@ -110,19 +110,17 @@ curl -fsSL https://raw.githubusercontent.com/rain-strom/rain-toolbox/main/.vimrc
 在目标服务器上以需要授权的用户运行：
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/rain-strom/rain-toolbox/main/install_rain_strom_github_key.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/install_rainstrm_github_key.sh)"
 ```
 
-脚本只下载 `https://github.com/rain-strom.keys` 中的公开密钥，并显示每把密钥的
+脚本只下载 `https://github.com/rainstrm.keys` 中的公开密钥，并显示每把密钥的
 编号、类型、SHA256 指纹和备注。存在多把公钥时，可以输入 `1`、`1 2` 或 `1,2`
-选择要安装的密钥；直接回车或输入 `all` 会安装全部。已经存在于
+选择要安装的密钥；在交互终端中直接回车或输入 `all` 会安装全部。已经存在于
 `~/.ssh/authorized_keys` 的密钥不会重复添加。这和上传私钥完全不同：服务器只需要公钥。
 
-在自动化或无交互环境中，可以使用 `KEY_SELECTION`；未指定时仍默认安装全部：
-
-```bash
-KEY_SELECTION="1,2" bash install_rain_strom_github_key.sh
-```
+脚本强制要求交互终端。通过管道、定时任务、CI 或关闭标准输入运行时会直接退出，
+不会下载或安装任何公钥。上面的 `bash -c "$(curl ...)"` 会保留终端输入；不要改成
+`curl URL | bash`，后者没有可供脚本读取的交互式标准输入。
 
 ## 更新 short_cuts
 
@@ -135,7 +133,7 @@ bash update_short_cuts.sh
 默认目标是当前目录下的 `short_cuts`。可覆盖仓库或安装位置：
 
 ```bash
-SHORT_CUTS_REPO=git@github-rain:rain-strom/short_cuts.git \
+SHORT_CUTS_REPO=git@github-rain:rainstrm/short_cuts.git \
 SHORT_CUTS_DIR="$HOME/py/short_cuts" \
 bash update_short_cuts.sh
 ```
