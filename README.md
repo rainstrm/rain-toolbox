@@ -64,18 +64,19 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/deploy_github_repo.sh)"
 ```
 
-脚本默认菜单包含 `rainstrm/backpack_rwa` 和 `rainstrm/short_cuts`，也可以选择
-`Custom repository` 后输入仓库名、`owner/name` 或完整 clone URL。脚本会依次询问
-安装目录、可选分支或 tag，并在覆盖前显示最终配置、要求确认。
+脚本菜单只包含 `Custom repository`，需要手动输入仓库名、`owner/name` 或完整 clone URL。
+仅输入仓库名时，脚本会将其解析为 `rainstrm/仓库名`，但不会在工具仓库中保存该名称。
+随后脚本会询问安装目录、可选分支或 tag，并在覆盖前显示最终配置、要求确认。
 
 已有项目不会被删除，而是移动为同级的
 `项目名.bak.YYYYMMDD_HHMMSS`；只有新仓库完整克隆成功后才会替换。部署结果只是仓库代码，
 项目依赖安装、数据库迁移和服务重启仍应按项目自己的文档执行。
 
-可以通过环境变量修改默认菜单、GitHub 所有者或安装根目录：
+可以通过环境变量修改 GitHub 所有者、SSH 主机别名或安装根目录：
 
 ```bash
-DEPLOY_PROJECTS="backpack_rwa another_repo other_owner/project" \
+GITHUB_OWNER="rainstrm" \
+GITHUB_HOST_ALIAS="github-rain" \
 DEPLOY_ROOT="/srv" \
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/deploy_github_repo.sh)"
 ```

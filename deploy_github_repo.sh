@@ -2,13 +2,10 @@
 set -euo pipefail
 
 # Interactively replace a local project with a freshly cloned repository.
-# Configure the menu with DEPLOY_PROJECTS, for example:
-#   DEPLOY_PROJECTS="backpack_rwa short_cuts another_owner/another_repo"
 
 GITHUB_OWNER="${GITHUB_OWNER:-rainstrm}"
 GITHUB_HOST_ALIAS="${GITHUB_HOST_ALIAS:-github-rain}"
 DEPLOY_ROOT="${DEPLOY_ROOT:-${PWD}}"
-DEPLOY_PROJECTS="${DEPLOY_PROJECTS:-backpack_rwa short_cuts}"
 
 if [[ ! -t 0 ]]; then
   echo "An interactive terminal is required." >&2
@@ -20,14 +17,6 @@ command -v git >/dev/null 2>&1 || {
   echo "git is required" >&2
   exit 1
 }
-
-declare -a projects=()
-read -r -a projects <<< "${DEPLOY_PROJECTS}"
-
-if (( ${#projects[@]} == 0 )); then
-  echo "DEPLOY_PROJECTS does not contain any projects." >&2
-  exit 1
-fi
 
 repo_url=""
 repo_name=""
@@ -65,41 +54,26 @@ resolve_repository() {
 }
 
 echo "Projects available for deployment:"
-for index in "${!projects[@]}"; do
-  project="${projects[index]}"
-  if [[ "${project}" == */* ]]; then
-    display_name="${project%.git}"
-  else
-    display_name="${GITHUB_OWNER}/${project}"
-  fi
-  printf '  [%d] %s\n' "$((index + 1))" "${display_name}"
-done
-custom_index=$((${#projects[@]} + 1))
-printf '  [%d] Custom repository\n' "${custom_index}"
+echo "  [1] Custom repository"
 
 selection=""
 printf 'Select a project [1]: '
 read -r selection
 selection="${selection:-1}"
 
-if [[ ! "${selection}" =~ ^[0-9]+$ ]] \
-  || (( 10#${selection} < 1 || 10#${selection} > custom_index )); then
+if [[ "${selection}" != "1" ]]; then
   echo "Invalid selection: ${selection}" >&2
   exit 1
 fi
 
-if (( 10#${selection} == custom_index )); then
-  custom_repository=""
-  printf 'Repository (name, owner/name, or clone URL): '
-  read -r custom_repository
-  if [[ -z "${custom_repository}" ]]; then
-    echo "A repository is required." >&2
-    exit 1
-  fi
-  resolve_repository "${custom_repository}"
-else
-  resolve_repository "${projects[$((10#${selection} - 1))]}"
+custom_repository=""
+printf 'Repository (name, owner/name, or clone URL): '
+read -r custom_repository
+if [[ -z "${custom_repository}" ]]; then
+  echo "A repository is required." >&2
+  exit 1
 fi
+resolve_repository "${custom_repository}"
 
 default_target="${DEPLOY_ROOT%/}/${repo_name}"
 target_input=""
