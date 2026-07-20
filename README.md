@@ -12,6 +12,7 @@
 | `setup_github_ssh.sh` | 使用本机已有的 `~/.ssh/id_rsa` 配置 `github-rain` GitHub SSH 主机别名。 |
 | `install_rainstrm_github_key.sh` | 交互选择 `rainstrm` 的公开 GitHub SSH 公钥，并去重写入当前用户的 `~/.ssh/authorized_keys`。 |
 | `update_short_cuts.sh` | 更新 `rainstrm/short_cuts`；原有目录会先备份，不会直接删除。 |
+| `deploy_github_repo.sh` | 交互选择并部署 GitHub 仓库；支持私有仓库、自定义仓库和安装目录，原目录会先备份。 |
 
 ## 远程运行 Shell 脚本
 
@@ -52,6 +53,31 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)" && bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
+```
+
+### 交互部署任意 GitHub 仓库
+
+先按上面的步骤运行 `setup_github_ssh.sh`，保证 Debian 服务器可以通过
+`github-rain` 访问私有仓库。然后进入存放项目的父目录，直接在交互终端运行：
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/deploy_github_repo.sh)"
+```
+
+脚本默认菜单包含 `rainstrm/backpack_rwa` 和 `rainstrm/short_cuts`，也可以选择
+`Custom repository` 后输入仓库名、`owner/name` 或完整 clone URL。脚本会依次询问
+安装目录、可选分支或 tag，并在覆盖前显示最终配置、要求确认。
+
+已有项目不会被删除，而是移动为同级的
+`项目名.bak.YYYYMMDD_HHMMSS`；只有新仓库完整克隆成功后才会替换。部署结果只是仓库代码，
+项目依赖安装、数据库迁移和服务重启仍应按项目自己的文档执行。
+
+可以通过环境变量修改默认菜单、GitHub 所有者或安装根目录：
+
+```bash
+DEPLOY_PROJECTS="backpack_rwa another_repo other_owner/project" \
+DEPLOY_ROOT="/srv" \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/deploy_github_repo.sh)"
 ```
 
 ## 服务器一键使用
