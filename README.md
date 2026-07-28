@@ -11,7 +11,7 @@
 | `setup_zsh_tools_debian.sh` | Debian / Ubuntu 安装 zsh、Oh My Zsh、Starship、eza、bat、fd、zoxide、Nerd Font 及两个 zsh 插件。会备份现有 `.zshrc` 和 Starship 配置。 |
 | `setup_github_ssh.sh` | 使用本机已有的 `~/.ssh/id_rsa` 配置 `github-rain` GitHub SSH 主机别名。 |
 | `install_rainstrm_github_key.sh` | 交互选择 `rainstrm` 的公开 GitHub SSH 公钥，并去重写入当前用户的 `~/.ssh/authorized_keys`。 |
-| `update_short_cuts.sh` | 更新 `rainstrm/short_cuts`；原有目录会先备份，不会直接删除。 |
+| `update_short_cuts.sh` | 检查 GitHub SSH、更新 `rainstrm/short_cuts`、修正脚本权限，并自动安装或更新 `requirements.txt` 中的 Python 模块。原目录会先备份。 |
 | `deploy_github_repo.sh` | 交互选择并部署 GitHub 仓库；支持私有仓库、自定义仓库和安装目录，原目录会先备份。 |
 
 ## 远程运行 Shell 脚本
@@ -47,6 +47,14 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
+```
+
+脚本会自动给 `expand/get_running_python.sh` 添加执行权限，并运行
+`python3 -m pip install --upgrade -r requirements.txt`。Debian 12+ 的 pip 如果支持
+`--break-system-packages`，脚本会自动添加该参数。只想更新代码、不安装 Python 模块时：
+
+```bash
+INSTALL_REQUIREMENTS=0 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
 ```
 
 也可以一次完成配置和更新：
