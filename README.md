@@ -11,7 +11,7 @@
 | `setup_zsh_tools_debian.sh` | Debian / Ubuntu 安装 zsh、Oh My Zsh、Starship、eza、bat、fd、zoxide、Nerd Font 及两个 zsh 插件。会备份现有 `.zshrc` 和 Starship 配置。 |
 | `setup_github_ssh.sh` | 使用本机已有的 `~/.ssh/id_rsa` 配置 `github-rain` GitHub SSH 主机别名。 |
 | `install_rainstrm_github_key.sh` | 交互选择 `rainstrm` 的公开 GitHub SSH 公钥，并去重写入当前用户的 `~/.ssh/authorized_keys`。 |
-| `update_short_cuts.sh` | 检查 GitHub SSH、更新 `rainstrm/short_cuts`、恢复 `.env` 等本地敏感文件、修正脚本权限，并自动安装或更新 `requirements.txt` 中的 Python 模块。原目录会先备份。 |
+| `update_short_cuts.sh` | 检查 GitHub SSH、更新 `rainstrm/short_cuts`、恢复 `.env` 等本地敏感文件、修正脚本权限，并自动安装或更新 `requirements.txt` 中的 Python 模块。原目录会先备份；可选在更新后自动重启 Web 控制台。 |
 | `deploy_github_repo.sh` | 交互选择并部署 GitHub 仓库；支持私有仓库、自定义仓库和安装目录，原目录会先备份。 |
 
 ## 远程运行 Shell 脚本
@@ -54,6 +54,15 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 `--break-system-packages`，脚本会自动添加该参数。更新前会把原目录备份为
 `short_cuts.bak.YYYYMMDD_HHMMSS`，并把旧目录里的 `.env`、`web/data/auth.json` 等
 本地敏感文件恢复到新克隆，保留列表可用 `PRESERVE_FILES` 环境变量覆盖。
+服务器上还可以保留一份持久的认证文件副本，并在更新后自动重启 Web 控制台：
+
+```bash
+AUTH_BACKUP_FILE=/root/auth.json RESTART_WEB_SERVICE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
+```
+
+`AUTH_BACKUP_FILE` 会把 `web/data/auth.json` 复制到指定路径（已存在则保留，不覆盖），
+即使时间戳备份被删除也能恢复；`RESTART_WEB_SERVICE=1` 会在更新后重启
+`web/server.py`（可用 `WEB_SERVER_SCRIPT`、`WEB_SERVER_PORT` 覆盖，端口默认 4188）。
 只想更新代码、不安装 Python 模块时：
 
 ```bash
