@@ -2,18 +2,24 @@
 set -euo pipefail
 
 # Update short_cuts, fix required permissions, and install Python dependencies.
+# The existing directory is backed up first, and local sensitive files
+# (.env, web/data/auth.json) are restored into the fresh clone.
 # Optional overrides:
 #   SHORT_CUTS_REPO, SHORT_CUTS_DIR, GITHUB_HOST_ALIAS
 #   INSTALL_REQUIREMENTS=0  Skip Python dependency installation.
+#   PRESERVE_FILES          Space-separated paths restored from the old copy
+#                           (default: .env web/data/auth.json).
 
 REPO_URL="${SHORT_CUTS_REPO:-git@github-rain:rainstrm/short_cuts.git}"
 TARGET_DIR="${SHORT_CUTS_DIR:-${PWD}/short_cuts}"
 SSH_HOST="${GITHUB_HOST_ALIAS:-github-rain}"
 INSTALL_REQUIREMENTS="${INSTALL_REQUIREMENTS:-1}"
+PRESERVE_FILES="${PRESERVE_FILES:-.env web/data/auth.json}"
 PARENT_DIR="$(dirname "${TARGET_DIR}")"
 TARGET_NAME="$(basename "${TARGET_DIR}")"
 TMP_DIR="${PARENT_DIR}/.${TARGET_NAME}.update.$$"
 BACKUP_DIR=""
+RESTORE_LIST=()
 
 cleanup() {
   rm -rf "${TMP_DIR}"
@@ -22,15 +28,8 @@ trap cleanup EXIT
 
 echo "=== short_cuts updater ==="
 
-command -v git >/dev/null 2>&1 || {
-  echo "git is required but was not found." >&2
-  exit 1
-}
-
-command -v ssh >/dev/null 2>&1 || {
-  echo "ssh is required but was not found." >&2
-  exit 1
-}
+command -v git >/dev/null 2>&1 || { echo "git is required but was not found." >&2; exit 1; }
+command -v ssh >/dev/null 2>&1 || { echo "ssh is required but was not found." >&2; exit 1; }
 
 mkdir -p "${PARENT_DIR}"
 
@@ -48,6 +47,15 @@ if printf '%s\n' "${ssh_output}" | grep -qi "successfully authenticated"; then
   echo "GitHub SSH authentication succeeded. Updating repository..."
 
   if git clone "${REPO_URL}" "${TMP_DIR}"; then
+    # Record local files that should survive the update (present in the old copy).
+    if [[ -d "${TARGET_DIR}" ]]; then
+      for item in ${PRESERVE_FILES}; do
+        if [[ -e "${TARGET_DIR}/${item}" ]]; then
+          RESTORE_LIST+=("${item}")
+        fi
+      done
+    fi
+
     if [[ -e "${TARGET_DIR}" || -L "${TARGET_DIR}" ]]; then
       BACKUP_DIR="${TARGET_DIR}.bak.$(date +%Y%m%d_%H%M%S)"
       echo "Backing up existing directory to ${BACKUP_DIR}"
@@ -60,6 +68,14 @@ if printf '%s\n' "${ssh_output}" | grep -qi "successfully authenticated"; then
       fi
       echo "Update failed; the previous directory was restored." >&2
       exit 1
+    fi
+
+    if [[ -n "${BACKUP_DIR}" && ${#RESTORE_LIST[@]} -gt 0 ]]; then
+      for item in "${RESTORE_LIST[@]}"; do
+        mkdir -p "$(dirname "${TARGET_DIR}/${item}")"
+        cp -a "${BACKUP_DIR}/${item}" "${TARGET_DIR}/${item}"
+        echo "Restored local file: ${item}"
+      done
     fi
 
     echo "Repository updated: ${TARGET_DIR}"
