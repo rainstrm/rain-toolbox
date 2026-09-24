@@ -19,6 +19,10 @@ set -euo pipefail
 #   WEB_SERVER_SCRIPT       Path to the web entrypoint
 #                           (default: ${TARGET_DIR}/web/server.py).
 #   WEB_SERVER_PORT         Port of the web console (default: 4188).
+#   LOG_PURGE=0             Skip the stale-log cleanup (default: enabled).
+#   LOG_DIR                 Directory cleaned as the first step
+#                           (default: ${HOME}/logs).
+#   LOG_KEEP_DAYS           Keep logs modified within N days (default: 3).
 
 REPO_URL="${SHORT_CUTS_REPO:-git@github-rain:rainstrm/short_cuts.git}"
 TARGET_DIR="${SHORT_CUTS_DIR:-${PWD}/short_cuts}"
@@ -35,6 +39,9 @@ SHORT_CUTS_BRANCH="${SHORT_CUTS_BRANCH:-main}"
 RESTART_WEB_SERVICE="${RESTART_WEB_SERVICE:-0}"
 WEB_SERVER_SCRIPT="${WEB_SERVER_SCRIPT:-${TARGET_DIR}/web/server.py}"
 WEB_SERVER_PORT="${WEB_SERVER_PORT:-4188}"
+LOG_PURGE="${LOG_PURGE:-1}"
+LOG_DIR="${LOG_DIR:-${HOME}/logs}"
+LOG_KEEP_DAYS="${LOG_KEEP_DAYS:-3}"
 
 cleanup() {
   rm -rf "${TMP_DIR}"
@@ -42,6 +49,39 @@ cleanup() {
 trap cleanup EXIT
 
 echo "=== short_cuts updater ==="
+
+# ==================== Step 1: purge stale logs ====================
+# Ported from upstream rmbbiji/rmbbiji-toolbox: drop log files older than
+# LOG_KEEP_DAYS from ~/logs before the repository is touched, so a long-running
+# box does not fill its disk with old trading logs. Only regular files are
+# removed (-type f), so the directory layout itself always survives, and any
+# permission/IO error is reported without aborting the whole update.
+case "${LOG_PURGE}" in
+  0|false|FALSE|no|NO)
+    echo "Stale log cleanup skipped (LOG_PURGE=${LOG_PURGE})."
+    ;;
+  *)
+    echo "Purging files older than ${LOG_KEEP_DAYS} days from ${LOG_DIR}..."
+    if [[ -d "${LOG_DIR}" ]]; then
+      # find -mtime +N means "modified more than N*24h ago" and also matches
+      # part of day N+1. For an exact N*24h cutoff use -mmin +$((N*24*60)).
+      stale_logs="$(
+        { find "${LOG_DIR}" -type f -mtime "+${LOG_KEEP_DAYS}" 2>/dev/null || true; } | wc -l | tr -d ' '
+      )"
+      if [[ "${stale_logs}" -gt 0 ]]; then
+        find "${LOG_DIR}" -type f -mtime "+${LOG_KEEP_DAYS}" -delete 2>/dev/null || true
+        remaining_logs="$(
+          { find "${LOG_DIR}" -type f 2>/dev/null || true; } | wc -l | tr -d ' '
+        )"
+        echo "Removed ${stale_logs} file(s) older than ${LOG_KEEP_DAYS} days; ${remaining_logs} left."
+      else
+        echo "No file older than ${LOG_KEEP_DAYS} days; nothing to purge."
+      fi
+    else
+      echo "Log directory does not exist; skipping cleanup: ${LOG_DIR}"
+    fi
+    ;;
+esac
 
 command -v git >/dev/null 2>&1 || { echo "git is required but was not found." >&2; exit 1; }
 command -v ssh >/dev/null 2>&1 || { echo "ssh is required but was not found." >&2; exit 1; }
@@ -117,6 +157,9 @@ if printf '%s\n' "${ssh_output}" | grep -qi "successfully authenticated"; then
         exit 1
       fi
 
+      # Restore local secrets right away, before anything else can fail: the
+      # web console then keeps its auth.json even if dependency installation
+      # aborts the script later on.
       if [[ -n "${BACKUP_DIR}" && ${#RESTORE_LIST[@]} -gt 0 ]]; then
         for item in "${RESTORE_LIST[@]}"; do
           mkdir -p "$(dirname "${TARGET_DIR}/${item}")"
@@ -135,8 +178,7 @@ if printf '%s\n' "${ssh_output}" | grep -qi "successfully authenticated"; then
 
       echo "Repository updated: ${TARGET_DIR}"
       [[ -z "${BACKUP_DIR}" ]] || echo "Previous version: ${BACKUP_DIR}"
-    
-elif [[ -d "${TARGET_DIR}" ]]; then
+    elif [[ -d "${TARGET_DIR}" ]]; then
       echo "Repository clone failed; continuing with local version: ${TARGET_DIR}" >&2
     else
       echo "Repository clone failed and no local version exists: ${TARGET_DIR}" >&2
@@ -180,9 +222,18 @@ case "${INSTALL_REQUIREMENTS}" in
         exit 1
       fi
 
+      # --ignore-installed is required, not cosmetic:
+      # lighter-sdk>=1.1.4 pins urllib3<2.1.0, so pip wants urllib3 2.0.7. On
+      # Debian the system already has urllib3 2.3.0 installed by apt
+      # (python3-urllib3) under /usr/lib/python3/dist-packages, which has no
+      # RECORD file; pip then aborts the whole run with uninstall-no-record-file
+      # while trying to uninstall it. With --ignore-installed pip only writes to
+      # /usr/local dist-packages (ahead of /usr/lib/python3/dist-packages in
+      # sys.path) and never tries to touch the apt-managed package.
       pip_args=(
         install
         --upgrade
+        --ignore-installed
         --disable-pip-version-check
         -r "${REQUIREMENTS_FILE}"
       )
@@ -193,7 +244,15 @@ case "${INSTALL_REQUIREMENTS}" in
       fi
 
       echo "Installing or updating Python dependencies from ${REQUIREMENTS_FILE}..."
-      python3 -m pip "${pip_args[@]}"
+      if ! python3 -m pip "${pip_args[@]}"; then
+        echo "Python dependency installation failed." >&2
+        echo "If it still reports uninstall-no-record-file, run the same command manually to see the full log:" >&2
+        echo "  python3 -m pip install --upgrade --ignore-installed --break-system-packages -r ${REQUIREMENTS_FILE}" >&2
+        exit 1
+      fi
+      # lighter-sdk needs urllib3<2.1; print the version actually in effect so it
+      # is obvious whether the apt-managed 2.3.0 won or not.
+      python3 -c "import urllib3; print('urllib3', urllib3.__version__, urllib3.__file__)" || true
       echo "Python dependencies are up to date."
     fi
     ;;
@@ -218,6 +277,8 @@ case "${RESTART_WEB_SERVICE}" in
       lsof -ti "tcp:${WEB_SERVER_PORT}" -sTCP:LISTEN 2>/dev/null || true
     }
 
+    # Local secrets were restored immediately after the clone/move above, so the
+    # old service can be stopped right away.
     echo "Stopping the old short_cuts web service..."
     server_pids="$(get_server_pids)"
     if [[ -n "${server_pids}" ]]; then
