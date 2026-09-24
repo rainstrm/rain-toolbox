@@ -11,9 +11,8 @@
 | `setup_zsh_tools_debian.sh` | Debian / Ubuntu 安装 zsh、Oh My Zsh、Starship、eza、bat、fd、zoxide、Nerd Font 及两个 zsh 插件。会备份现有 `.zshrc` 和 Starship 配置。 |
 | `setup_github_ssh.sh` | 使用本机已有的 `~/.ssh/id_rsa` 配置 `github-rain` GitHub SSH 主机别名。 |
 | `install_rainstrm_github_key.sh` | 交互选择 `rainstrm` 的公开 GitHub SSH 公钥，并去重写入当前用户的 `~/.ssh/authorized_keys`。 |
-| `update_short_cuts.sh` | 检查 GitHub SSH、更新 `rainstrm/short_cuts`、修正脚本权限，并自动安装或更新 `requirements.txt` 中的 Python 模块。已有 git 目录会原地更新（`logs/`、`.env` 等未入库文件保持原位，运行中脚本日志不断流）；首次安装或非 git 目录会先备份再替换，并恢复 `.env` 等本地敏感文件；可选在更新后自动重启 Web 控制台。 |
+| `update_short_cuts.sh` | 更新 `rainstrm/short_cuts`、修正脚本权限，并自动安装或更新 `requirements.txt` 中的 Python 模块。按 个人私钥 → 只读 Deploy Key → HTTPS 压缩包 的顺序自动选用一份可用凭证：有可用密钥就 `git` 原地更新（`logs/`、`.env` 等未入库文件保持原位，运行中脚本日志不断流），两份密钥都没有就把仓库压缩包下载下来直接覆盖文件；首次安装或非 git 目录会先备份再替换，并恢复 `.env` 等本地敏感文件；可选在更新后自动重启 Web 控制台。 |
 | `deploy_github_repo.sh` | 交互选择并部署 GitHub 仓库；支持私有仓库、自定义仓库和安装目录，原目录会先备份。 |
-| `update_short_cuts_deploy_key.sh` | 面向**不适合放 `rainstrm` 个人 GitHub 私钥**的服务器：只用单仓库只读 Deploy Key 部署或更新 `short_cuts`。自动写入专属 SSH 主机别名、按需补 `known_hosts`、单独校验 Deploy Key，再克隆或用 `git pull --ff-only` 更新。 |
 
 ## 远程运行 Shell 脚本
 
@@ -38,17 +37,34 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/ma
 
 ### 更新 short_cuts
 
-配置 `github-rain` SSH 主机别名
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)"
-```
-
-再切换到希望存放 `short_cuts` 的目录运行更新：
+切换到希望存放 `short_cuts` 的目录运行更新：
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
 ```
+
+脚本会自己挑一份可用的凭证，按顺序尝试，第一个能用的生效。密钥是用 `-i` 配合
+`IdentitiesOnly` 显式指定的，因此**不再需要先跑 `setup_github_ssh.sh` 配置 `github-rain`
+别名**（那个脚本仍然可以用来手工 `ssh -T git@github-rain` 或克隆别的仓库）：
+
+| 顺序 | 凭证 | 更新方式 |
+| --- | --- | --- |
+| 1 | 个人私钥 `~/.ssh/id_rsa` | `git` 原地更新，可拉可推 |
+| 2 | 只读 Deploy Key `~/.ssh/deploy_key_shortcuts` | `git` 原地更新（只读，推不了） |
+| 3 | 两份都没有 | 下载仓库压缩包，直接把文件覆盖到本地 |
+
+第 2 种是给**不能放个人私钥**的服务器准备的：Deploy Key 只对 `short_cuts` 这一个仓库生效，
+而且只读，拿到它最多只能拉代码。在 GitHub 仓库 `Settings > Deploy keys` 里添加对应**公钥**
+（不要勾选 "Allow write access"），私钥放到服务器 `~/.ssh/deploy_key_shortcuts` 并
+`chmod 600` 即可；脚本发现密钥没被 GitHub 接受时会打印公钥内容并继续往下试。
+
+第 3 种不需要任何密钥：脚本下载仓库压缩包（默认
+`https://codeload.github.com/rainstrm/short_cuts/tar.gz/refs/heads/main`）后**原地覆盖**文件，
+不移动目录本身，因此 `logs/`、`.env`、`web/data/auth.json` 这些未入库的运行状态不会被碰，
+运行中的脚本日志也不会断流。两点注意：`short_cuts` 是私有仓库，匿名下载会 404，需要设置
+`GITHUB_TOKEN`（或 `GH_TOKEN`）才有权限；另外这种方式判断不出"上游删了哪些文件"，只能靠本地
+`.git` 里已检出的那个提交去比对，没有 `.git` 时上游删掉的文件会残留，恢复密钥后重跑一次
+`git` 更新即可回到干净状态。
 
 脚本会自动给 `expand/get_running_python.sh` 添加执行权限，并运行
 `python3 -m pip install --upgrade --ignore-installed -r requirements.txt`。Debian 12+ 的 pip
@@ -75,45 +91,28 @@ AUTH_BACKUP_FILE=/root/auth.json RESTART_WEB_SERVICE=1 bash -c "$(curl -fsSL htt
 INSTALL_REQUIREMENTS=0 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
 ```
 
-也可以一次完成配置和更新：
+也可以一次完成别名配置和更新（`github-rain` 别名只是方便手工 `ssh` 或克隆别的仓库，
+更新本身不依赖它）：
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/setup_github_ssh.sh)" && bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
 ```
 
-### 用只读 Deploy Key 更新 short_cuts（服务器没有个人 GitHub 私钥时）
-
-有些服务器不适合放 `rainstrm` 的个人 GitHub 私钥，只给一份**该仓库专用的只读 Deploy Key**。
-这类服务器用这个脚本，它不依赖 `github-rain` 别名，也完全不会碰到个人私钥：
-
-1. 把 Deploy Key 私钥放到服务器 `~/.ssh/deploy_key_shortcuts`，并设为 `chmod 600`；
-2. 在 GitHub 仓库 `Settings > Deploy keys` 里添加对应的**公钥**，权限保持只读
-   （不要勾选 "Allow write access"）；
-3. 运行：
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts_deploy_key.sh)"
-```
-
-脚本会写入 `Host github.com-deploy-shortcuts` 配置块（用标记块原地重写，重复运行不会叠加）、
-按需补 `known_hosts`、用 `IdentitiesOnly` 单独测试 Deploy Key 是否被接受（被拒绝时打印公钥，
-方便直接粘到 GitHub），然后克隆或更新 `~/short_cuts`。目录已经是 git 仓库时执行
-`git pull --ff-only`：不会产生合并提交，也无法 push；如果旧部署的 remote 指向别的别名，
-会自动改写成 Deploy Key 的地址。
-
 可覆盖的变量：
 
 ```bash
-GITHUB_REPO="rainstrm/short_cuts" \
+SHORT_CUTS_DIR="$HOME/short_cuts" \
+SHORT_CUTS_BRANCH="main" \
+SHORT_CUTS_REPO="git@github.com:rainstrm/short_cuts.git" \
+GITHUB_SSH_KEY="$HOME/.ssh/id_rsa" \
 DEPLOY_KEY="$HOME/.ssh/deploy_key_shortcuts" \
-TARGET_DIR="$HOME/short_cuts" \
-BRANCH="main" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts_deploy_key.sh)"
+SHORT_CUTS_ARCHIVE="https://codeload.github.com/rainstrm/short_cuts/tar.gz/refs/heads/main" \
+GITHUB_TOKEN="ghp_xxx" \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rainstrm/rain-toolbox/main/update_short_cuts.sh)"
 ```
 
-这类服务器只拿到代码，不会安装 Python 依赖、也不会重启 Web 服务；需要这些步骤请按
-`short_cuts` 项目自己的文档处理。`update_short_cuts.sh` 依赖 `github-rain` 别名（即个人私钥），
-在只给 Deploy Key 的服务器上跑不了，这也是本脚本存在的原因。
+`SHORT_CUTS_DIR` 默认是当前目录下的 `short_cuts`。`GITHUB_HOST_ALIAS` 也仍然可用：设成
+`github-rain` 时脚本会用 `git@github-rain:...` 作为仓库地址，密钥依旧由脚本用 `-i` 指定。
 
 ### 交互部署任意 GitHub 仓库
 
